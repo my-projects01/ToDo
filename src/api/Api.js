@@ -1,13 +1,13 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001'; 
-const token = localStorage.getItem('token');
+export const API_URL = 'http://localhost:5001';
+
 
 // get all tasks
-export const getTasks = async () => {
+export const getTasks = async ( limit = 10, skip = 0) => {
   const token = localStorage.getItem('token');
   try {
-    const response = await axios.get(`${API_URL}/api/tasks/get`, {
+  const response = await axios.get(`${API_URL}/api/tasks/get?limit=${limit}&skip=${skip}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -18,6 +18,7 @@ export const getTasks = async () => {
     return [];
   }
 };
+
 
 // get single task
 export const createTask = async (task, ) => {
