@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import RegisterForm from '../components/forms/RegisterForm';
-const API_URL = 'http://localhost:3001';
+import {API_URL} from '../api/Api';
 
 const Register = () => {
   const navigate = useNavigate();
