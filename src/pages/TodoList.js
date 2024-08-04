@@ -19,15 +19,21 @@ const TodoList = () => {
   const [newDueDate, setNewDueDate] = useState("");
   const [expandedTaskId, setExpandedTaskId] = useState(null);
 
+  const [limit] = useState(10); // Number of tasks per page
+  const [skip, setSkip] = useState(0); // Number of tasks to skip (for pagination)
+  const [totalTasks, setTotalTasks] = useState(0); // Total number of tasks
+  const [page, setPage] = useState(1); // Current page
+
   useEffect(() => {
     const fetchTasks = async () => {
       if (user) {
-        const data = await getTasks();
-        setTasks(data);
+        const data = await getTasks(limit, skip);
+        setTasks(data); 
+        setTotalTasks(data); 
       }
     };
     fetchTasks();
-  }, [user]);
+  }, [user, skip]);
 
   const handleUpdateClick = (task) => {
     console.log(task)
@@ -63,7 +69,7 @@ const TodoList = () => {
       console.log("Updated task:", updatedTask);
       
       setTasks(
-        tasks.map((task) =>
+        tasks?.map((task) =>
           task._id === selectedTask._id ? updatedTask : task
         )
       );
@@ -74,8 +80,6 @@ const TodoList = () => {
     setIsModalOpen(false);
     setSelectedTask(null);
   };
-  
-  
 
   const handleCreate = async () => {
     if (!user ) {
@@ -112,6 +116,10 @@ const TodoList = () => {
     setExpandedTaskId(expandedTaskId === taskId ? null : taskId);
   };
 
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    setSkip((newPage - 1) * limit);
+  };
 
   return (
     <div className="p-4">
@@ -138,7 +146,7 @@ const TodoList = () => {
               </tr>
             </thead>
             <tbody>
-              {tasks.map((task) => (
+              {tasks?.map((task) => (
                 <tr key={task._id} className="border-b">
                   <td className="px-4 py-2">{task?.title}</td>
                   <td className="px-4 py-2">{task?.description}</td>
@@ -182,7 +190,7 @@ const TodoList = () => {
       <div className="md:hidden">
         {/* Card View for smaller screens */}
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-          {tasks.map((task) => (
+          {tasks?.map((task) => (
             <div
               key={task._id}
               className="bg-white shadow-lg rounded-lg p-4 border border-gray-200"
@@ -233,136 +241,127 @@ const TodoList = () => {
         </div>
       </div>
 
-      {/* Update Task Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <h2 className="text-xl font-bold mb-4">Update Task</h2>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="title">
-            Title
-          </label>
-          <input
-            id="title"
-            type="text"
-            value={updatedTitle}
-            onChange={(e) => setUpdatedTitle(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="description">
-            Description
-          </label>
-          <input
-            id="description"
-            type="text"
-            value={updatedDescription}
-            onChange={(e) => setUpdatedDescription(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="status">
-            Status
-          </label>
-          <select
-            id="status"
-            value={updatedStatus}
-            onChange={(e) => {setUpdatedStatus(e.target.value)}}
-            className="w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="Pending">Pending</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Done">Done</option>
-            <option value="Over Due">Over Due</option>
-          </select>
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="dueDate">
-            Due Date
-          </label>
-          <input
-            id="dueDate"
-            type="date"
-            value={updatedDueDate}
-            onChange={(e) => setUpdatedDueDate(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+      {/* Pagination Controls */}
+      <div className="mt-6 flex justify-between">
         <button
-          onClick={handleUpdate}
-          className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+          onClick={() => handlePageChange(page - 1)}
+          disabled={page === 1}
+          className="bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
         >
-          Update Task
+          Previous
         </button>
-      </Modal>
+        <span className="py-2 px-4">Page {page} </span>
+        <button
+          onClick={() => handlePageChange(page + 1)}
+          disabled={limit > totalTasks}
+          className="bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+        >
+          Next
+        </button>
+      </div>
+
+      {/* Update Task Modal */}
+      {isModalOpen && (
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleUpdate}
+          title="Update Task"
+        >
+          <div className="mb-4">
+            <label className="block text-gray-700">Title</label>
+            <input
+              type="text"
+              value={updatedTitle}
+              onChange={(e) => setUpdatedTitle(e.target.value)}
+              className="border border-gray-300 rounded-lg p-2 w-full"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700">Description</label>
+            <textarea
+              value={updatedDescription}
+              onChange={(e) => setUpdatedDescription(e.target.value)}
+              className="border border-gray-300 rounded-lg p-2 w-full"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700">Status</label>
+            <select
+              value={updatedStatus}
+              onChange={(e) => setUpdatedStatus(e.target.value)}
+              className="border border-gray-300 rounded-lg p-2 w-full"
+            >
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Done">Done</option>
+              <option value="Over Due">Over Due</option>
+            </select>
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700">Due Date</label>
+            <input
+              type="date"
+              value={updatedDueDate}
+              onChange={(e) => setUpdatedDueDate(e.target.value)}
+              className="border border-gray-300 rounded-lg p-2 w-full"
+            />
+          </div>
+        </Modal>
+      )}
 
       {/* Create Task Modal */}
-      <Modal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-      >
-        <h2 className="text-xl font-bold mb-4">Create Task</h2>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="newTitle">
-            Title
-          </label>
-          <input
-            id="newTitle"
-            type="text"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="newDescription">
-            Description
-          </label>
-          <input
-            id="newDescription"
-            type="text"
-            value={newDescription}
-            onChange={(e) => setNewDescription(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="newStatus">
-            Status
-          </label>
-          <select
-            id="newStatus"
-            value={newStatus}
-            onChange={(e) => setNewStatus(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="Pending">Pending</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Done">Done</option>
-            <option value="Over Due">Over Due</option>
-          </select>
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2" htmlFor="newDueDate">
-            Due Date
-          </label>
-          <input
-            id="newDueDate"
-            type="date"
-            value={newDueDate}
-            onChange={(e) => setNewDueDate(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <button
-          onClick={handleCreate}
-          className="bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-700"
+      {isCreateModalOpen && (
+        <Modal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSubmit={handleCreate}
+          title="Create Task"
         >
-          Create Task
-        </button>
-      </Modal>
+          <div className="mb-4">
+            <label className="block text-gray-700">Title</label>
+            <input
+              type="text"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              className="border border-gray-300 rounded-lg p-2 w-full"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700">Description</label>
+            <textarea
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              className="border border-gray-300 rounded-lg p-2 w-full"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700">Status</label>
+            <select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+              className="border border-gray-300 rounded-lg p-2 w-full"
+            >
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Done">Done</option>
+              <option value="Over Due">Over Due</option>
+            </select>
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700">Due Date</label>
+            <input
+              type="date"
+              value={newDueDate}
+              onChange={(e) => setNewDueDate(e.target.value)}
+              className="border border-gray-300 rounded-lg p-2 w-full"
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
 
 export default TodoList;
+
